@@ -19,7 +19,7 @@ The screenshot shows a running application with real readings. Sensor availabili
 - **Per-CPU activity:** select a logical CPU to see processes scheduled there over the last one-second ETW window, with CPU time and a short history. Switch to Allowed/Denied to manage access.
 - **CPU affinity controls:** allow or deny individual CPUs, or edit a process's complete affinity mask. The last allowed CPU cannot be removed.
 - **Launch on selected CPUs:** start an executable with its affinity applied before its main thread resumes.
-- **Process explorer:** search by name or PID, sort by CPU or RAM, and inspect the working set.
+- **Process explorer:** search by name or PID, filter CPU ≥ 1%, RAM ≥ 100 MiB, or restricted affinity, sort by CPU or RAM, and inspect the working set. Activity also offers 1% and 5% per-CPU thresholds.
 - **Virtual memory map:** committed regions, virtual addresses, sizes, allocation types, and protection flags.
 - **Integrated hardware telemetry:** Windows ACPI/storage readings plus bundled LibreHardwareMonitorLib. No separate monitoring application is required.
 - **Temperature history:** the latest 120 successful readings per sensor, with a graph and interval minimum/maximum.
@@ -27,7 +27,7 @@ The screenshot shows a running application with real readings. Sensor availabili
 
 ## Install
 
-Download `CoreScope-Setup-0.5.0.exe` from [Releases](https://github.com/Sobolev5/corescope/releases/latest). The English/Russian installer creates shortcuts and an uninstall entry. Startup at sign-in is optional and starts the application in the tray.
+Download `CoreScope-Setup-0.6.0.exe` from [Releases](https://github.com/Sobolev5/corescope/releases/latest). The English/Russian installer creates shortcuts and an uninstall entry. Startup at sign-in is optional and starts the application in the tray.
 
 If Microsoft Edge WebView2 Runtime is missing, setup downloads it from Microsoft; an internet connection is needed for that step. The installer is currently unsigned.
 
@@ -93,6 +93,7 @@ History is held in memory until CoreScope exits. Missing samples are not replace
 cargo run --release
 cargo test
 cargo fmt --check
+node --test scripts/ui-test.cjs
 powershell -NoProfile -File scripts/build.ps1
 powershell -NoProfile -File scripts/build-installer.ps1
 ```
@@ -121,11 +122,6 @@ The API smoke test covers process identity, memory queries, affinity validation,
 | `assets/sensors.ps1` | Windows and integrated-library sensor collection |
 
 The server listens only on `127.0.0.1`, checks Host/Origin, and requires a random session token for changes. This protects against cross-origin requests, not other programs running as the same user. Do not expose it through a reverse proxy.
-
-## Contributors
-
-- [Sobolev5](https://github.com/Sobolev5)
-- [itramb](https://github.com/itramb)
 
 ## License
 

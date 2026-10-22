@@ -152,6 +152,9 @@ pub fn snapshot() -> Value {
 unsafe extern "system" fn event(record: *mut EVENT_RECORD) {
     let e = &*record;
     if e.EventHeader.ProviderId.data1 != ThreadGuid.data1
+        || e.EventHeader.ProviderId.data2 != ThreadGuid.data2
+        || e.EventHeader.ProviderId.data3 != ThreadGuid.data3
+        || e.EventHeader.ProviderId.data4 != ThreadGuid.data4
         || e.UserDataLength < 8
         || e.UserData.is_null()
     {
@@ -189,6 +192,7 @@ unsafe extern "system" fn buffer(log: *mut EVENT_TRACE_LOGFILEW) -> u32 {
         if let Ok(mut s) = state.lock() {
             if (*log).EventsLost > s.lost {
                 s.lost = (*log).EventsLost;
+                s.history.clear();
                 for c in &mut s.cpus {
                     c.running = None;
                     c.segments.clear();

@@ -1,6 +1,12 @@
 // Presentation-only localization. Source text is retained for reversible language changes.
 let language = 'ru';
 const translations = {
+ 'Фильтр процессов':'Process filter',
+ 'Все процессы':'All processes',
+ 'Ограниченная привязка':'Restricted affinity',
+ 'Порог активности':'Activity threshold',
+ 'Любая активность':'Any activity',
+ 'Сбросить':'Reset',
  'Для активности запустите CoreScope от администратора':'Run CoreScope as administrator to track activity',
  'Активность для нескольких групп CPU пока недоступна':'Activity across multiple CPU groups is not supported yet',
  'Выполнение за 1 секунду · задержка ':'Execution over 1 second · delay ',

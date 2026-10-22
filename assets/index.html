@@ -340,6 +340,7 @@
         margin-top: 18px;
       }
       .toolbar {
+        flex-wrap: wrap;
         display: flex;
         gap: 10px;
         align-items: center;
@@ -754,8 +755,7 @@
             <div class="panelhead">
               <h2>Процессы <span id="count" class="muted"></span></h2>
               <div class="toolbar">
-                <button id="clearFilter" hidden>Все CPU</button
-                ><input
+                <select id="processFilter" aria-label="Фильтр процессов"><option value="all">Все процессы</option><option value="busy">CPU ≥ 1%</option><option value="memory">RAM ≥ 100 MiB</option><option value="restricted">Ограниченная привязка</option></select><button id="clearFilter" hidden>Сбросить</button><input
                   id="search"
                   placeholder="Имя или PID…"
                   aria-label="Поиск процессов"
@@ -803,7 +803,7 @@
               <div class="coretools" id="coreTools" hidden>
                 <div class="coretabs">
                   <button class="active" id="activityTab">Активность</button>
-                  <button class="active" id="allowedTab">Разрешено</button
+                  <button id="allowedTab">Разрешено</button
                   ><button id="deniedTab">Запрещено</button>
                 </div>
                 <input
@@ -811,6 +811,7 @@
                   placeholder="Процесс или PID"
                   aria-label="Поиск на ядре"
                 />
+                <select id="activityThreshold" aria-label="Порог активности"><option value="0">Любая активность</option><option value="1">CPU ≥ 1%</option><option value="5">CPU ≥ 5%</option></select><span id="coreMatches" class="hint"></span>
               </div>
               <div id="coreProcesses" class="corelist"></div>
             </div>
@@ -1020,6 +1021,14 @@
           .join("");
       }
 
+      function matchesProcess(p, query, mode="all", cpuCount=0) {
+        const q=query.trim().toLowerCase();
+        if (!(String(p.name||"").toLowerCase().includes(q)||String(p.pid).includes(q))) return false;
+        if (mode==="busy") return p.cpu>=1;
+        if (mode==="memory") return p.memory>=100*1024*1024;
+        if (mode==="restricted") return Array.isArray(p.affinity)&&p.affinity.length>0&&p.affinity.length<cpuCount;
+        return true;
+      }
       let activityOrder=[];
       function renderActivity(core, sample) {
         const a=data.activity||{};
@@ -1029,24 +1038,30 @@
         }
         $("coreHint").textContent=`Выполнение за 1 секунду · задержка ${Math.round(a.lag_ms)} ms · Простой ${pct(sample.idle)}%`;
         const q=$("coreSearch").value.toLowerCase(), processes=new Map(data.processes.map(p=>[p.pid,p]));
-        let rows=sample.rows.map(r=>({...r,process:processes.get(r.pid)})).filter(r=>(r.process?.name||'').toLowerCase().includes(q)||String(r.pid).includes(q));
+        let rows=sample.rows.map(r=>({...r,process:processes.get(r.pid)})).filter(r=>matchesProcess(r.process||{pid:r.pid},q)&&r.usage>=Number($("activityThreshold").value));
+        $("coreMatches").textContent=rows.length+" / "+sample.rows.length;
         const hover=$("coreProcesses").matches(':hover')||$("coreProcesses").contains(document.activeElement);
         if(hover&&activityOrder.length){const order=new Map(activityOrder.map((pid,i)=>[pid,i]));rows.sort((a,b)=>(order.get(a.pid)??1e9)-(order.get(b.pid)??1e9));}
         activityOrder=rows.map(r=>r.pid);
-        // Preserve an actively focused control; otherwise update values in stable row order.
-        if($("coreProcesses").contains(document.activeElement))return;
+        // Avoid replacing a pressed button; keyboard focus alone must not freeze telemetry.
+        const focused=$("coreProcesses").contains(document.activeElement)?document.activeElement:null;
+        if(focused?.matches(":active"))return;
+        const focusKey=focused?.dataset.togglePid ? `[data-toggle-pid="${focused.dataset.togglePid}"]` : focused?.dataset.pid ? `[data-pid="${focused.dataset.pid}"]` : null;
         $("coreProcesses").innerHTML=(sample.unknown>0.1?`<p class="hint">Нераспознанное время: ${pct(sample.unknown)}%</p>`:'')+(a.lost?`<p class="hint">Потеряно событий ETW: ${a.lost}</p>`:'')+rows.map(r=>{
           const p=r.process,on=p?.affinity?.includes(core.id),last=on&&p.affinity.length===1;
           const canChange=p?.identity&&p.allowed?.includes(core.id)&&!last;
           const h=r.history||[],points=h.map((v,i)=>`${i*90/Math.max(1,h.length-1)},${22-Math.min(100,v)*.2}`).join(' ');
-          const title=p?`<button class="processlink" data-pid="${r.pid}"><strong>${esc(p.name)}</strong><small>PID ${r.pid} · ${pct(r.usage)}% · ${pct(r.ms)} ms</small></button>`:`<div class="processlink"><strong>PID ${r.pid}</strong><small>Процесс завершён или недоступен · ${pct(r.usage)}%</small></div>`;
+          const title=p?`<button class="processlink" data-pid="${r.pid}" data-identity="${esc(p.identity||'')}"><strong>${esc(p.name)}</strong><small>PID ${r.pid} · ${pct(r.usage)}% · ${pct(r.ms)} ms</small></button>`:`<div class="processlink"><strong>PID ${r.pid}</strong><small>Процесс завершён или недоступен · ${pct(r.usage)}%</small></div>`;
           return `<div class="coreprocess">${title}<svg width="90" height="24" viewBox="0 0 90 24" aria-label="Доля времени ядра"><polyline fill="none" stroke="#247a54" stroke-width="1.5" points="${points}"/></svg><button class="coretoggle ${on?'deny':'allow'}" data-toggle-pid="${r.pid}" data-identity="${esc(p?.identity||'')}" data-toggle-core="${core.id}" data-enable="${!on}" ${canChange?'':'disabled'}>${last?'Единственное':!p?.allowed?.includes(core.id)?'Нет доступа':on?'Запретить':'Разрешить'}</button></div>`;
-        }).join('')||'<div class="empty">'+(q?'Процессы не найдены':sample.unknown>1?'Недостаточно данных':'Простой')+'</div>';
+        }).join('')||'<div class="empty">'+(q||sample.rows.length?'Процессы не найдены':sample.unknown>1?'Недостаточно данных':'Простой')+'</div>';
+        if(focusKey)$("coreProcesses").querySelector(focusKey)?.focus({preventScroll:true});
       }
       function renderCore() {
         if (!data?.ready || coreBusy) return;
         const core = data.cpus.find((c) => c.id === filterCore);
         $("coreTools").hidden = !core;
+        $("activityThreshold").hidden=coreMode!=="activity";
+        $("coreMatches").textContent="";
         if (!core) {
           $("coreTitle").textContent = "Процессы ядра";
           $("coreHint").textContent = "Выберите ядро на карте.";
@@ -1075,12 +1090,14 @@
           .filter(
             (p) =>
               (coreMode === "allowed") === p.affinity.includes(core.id) &&
-              (p.name.toLowerCase().includes(q) || String(p.pid).includes(q)),
+              matchesProcess(p,q),
           )
           .sort((a, b) => a.name.localeCompare(b.name) || a.pid - b.pid);
         const focus = document.activeElement;
-        // Keep keyboard focus while counters update.
-        if ($("coreProcesses").contains(focus)) return;
+        const focused=$("coreProcesses").contains(focus)?focus:null;
+        if(focused?.matches(":active"))return;
+        const focusKey=focused?.dataset.togglePid ? `[data-toggle-pid="${focused.dataset.togglePid}"]` : focused?.dataset.pid ? `[data-pid="${focused.dataset.pid}"]` : null;
+        $("coreMatches").textContent=rows.length+" / "+(coreMode==="allowed"?allowed.length:known.length-allowed.length);
         $("coreProcesses").innerHTML =
           rows
             .map((p) => {
@@ -1089,6 +1106,7 @@
               return (
                 '<div class="coreprocess"><button class="processlink" data-pid="' +
                 p.pid +
+                '" data-identity="' + esc(p.identity||'') +
                 '" title="Открыть процесс"><strong>' +
                 esc(p.name) +
                 "</strong><small>PID " +
@@ -1115,23 +1133,24 @@
               );
             })
             .join("") || '<div class="empty">Процессы не найдены</div>';
+        if(focusKey)$("coreProcesses").querySelector(focusKey)?.focus({preventScroll:true});
       }
       function table() {
         let q = $("search").value.toLowerCase();
         let rows = data.processes.filter(
           (p) =>
-            (p.name.toLowerCase().includes(q) || String(p.pid).includes(q)),
+            matchesProcess(p,q,$("processFilter").value,data.cpus.length),
         );
-        rows.sort((a, b) => b[sort] - a[sort]);
-        $("count").textContent = "· " + rows.length;
-        $("clearFilter").hidden = true;
-        $("clearFilter").textContent =
-          filterCore === null ? "Все CPU" : `CPU ${filterCore} ×`;
+        rows.sort((a, b) => b[sort] - a[sort] || a.pid-b.pid);
+        $("sortCpu").textContent=sort==="cpu"?"CPU ↓":"CPU";
+        $("sortRam").textContent=sort==="memory"?"RAM ↓":"RAM";
+        $("count").textContent = "· " + rows.length + " / " + data.processes.length;
+        $("clearFilter").hidden = !q && $("processFilter").value==="all";
         $("processes").innerHTML =
           rows
             .map(
               (p) =>
-                `<tr data-pid="${p.pid}" class="${p.pid === selected ? "selected" : ""}"><td>${esc(p.name)}</td><td class="mono">${p.pid}</td><td class="mono">${pct(p.cpu)}%</td><td class="mono">${bytes(p.memory)}</td><td>${p.affinity === null ? "Нет доступа" : p.affinity.length === data.cpus.length ? "Все CPU" : p.affinity.join(", ")}</td></tr>`,
+                `<tr data-pid="${p.pid}" data-identity="${esc(p.identity||'')}" class="${p.pid === selected ? "selected" : ""}"><td>${esc(p.name)}</td><td class="mono">${p.pid}</td><td class="mono">${pct(p.cpu)}%</td><td class="mono">${bytes(p.memory)}</td><td>${p.affinity === null ? "Нет доступа" : p.affinity.length === data.cpus.length ? "Все CPU" : p.affinity.join(", ")}</td></tr>`,
             )
             .join("") || '<tr><td colspan="5">Процессы не найдены</td></tr>';
       }
@@ -1291,6 +1310,8 @@
         renderCore();
       };
       $("coreSearch").oninput = renderCore;
+      $("activityThreshold").onchange=()=>{activityOrder=[];renderCore();};
+      $("processFilter").onchange=()=>data&&table();
       document.addEventListener("click", async (e) => {
         const toggle = e.target.closest("[data-toggle-pid]");
         if (toggle) {
@@ -1348,8 +1369,10 @@
         }
         const row = e.target.closest("[data-pid]");
         if (row) {
-          selected = +row.dataset.pid;
-          const p = data.processes.find((p) => p.pid === selected);
+          const pid = +row.dataset.pid;
+          const p = data.processes.find((p) => p.pid === pid);
+          if(!p || (row.dataset.identity && row.dataset.identity!==p.identity)){toast("Процесс уже завершён или PID был переиспользован. Обновите выбор.");return;}
+          selected = pid;
           selectedIdentity = p.identity;
           draft = new Set(p.affinity || []);
           memoryData = null;
@@ -1418,7 +1441,8 @@
       });
       $("search").oninput = () => data && table();
       $("clearFilter").onclick = () => {
-        filterCore = null;
+        $("search").value="";
+        $("processFilter").value="all";
         table();
         map();
         renderCore();
