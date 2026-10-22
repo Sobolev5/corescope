@@ -4,13 +4,7 @@ A Windows desktop monitor for CPU affinity, process memory, and hardware telemet
 
 [Download the installer](https://github.com/Sobolev5/corescope/releases/latest) · [All releases](https://github.com/Sobolev5/corescope/releases) · [Report an issue](https://github.com/Sobolev5/corescope/issues)
 
-## Screenshots
-
-### System overview
-
-Live CPU utilization, RAM usage, and available temperature sensors. ACPI thermal zones are shown separately from CPU temperatures.
-
-![CoreScope in English: isometric CPU and RAM map, utilization cards, and hardware sensors](docs/screenshots/overview-en.jpg)
+## Screenshot
 
 ### Per-CPU process access
 
@@ -18,7 +12,7 @@ Select a logical CPU to view which processes may run on it. Allow or deny access
 
 ![CoreScope in English: CPU 0 selected, with Allowed and Denied process tabs and per-process controls](docs/screenshots/cpu-access-en.jpg)
 
-Screenshots show a running application with real readings. Sensor availability varies by hardware, permissions, and drivers.
+The screenshot shows a running application with real readings. Sensor availability varies by hardware, permissions, and drivers.
 
 ## Features
 
