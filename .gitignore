@@ -1,0 +1,8 @@
+/target
+/dist
+/*.zip
+/installer/redist
+*.log
+.env
+*.token
+/docs/*.png

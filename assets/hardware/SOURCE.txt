@@ -1,0 +1,7 @@
+Unmodified DLLs from LibreHardwareMonitor v0.9.6 (.NET Framework 4.7.2).
+https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases/tag/v0.9.6
+Release archive: LibreHardwareMonitor.zip
+SHA256: 086d9f1b5a99e643edc2cfaaac16051685b551e4c5ac0b32a57c58c0e529c001
+Corresponding source: https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/tree/v0.9.6
+See LICENSE.txt and THIRD-PARTY-NOTICES.txt for licenses and upstream notices.
+CoreScope does not install or launch the LibreHardwareMonitor GUI or a driver.
