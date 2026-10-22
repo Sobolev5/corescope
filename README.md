@@ -52,6 +52,23 @@ Closing the window keeps monitoring active in the tray by default. Click the tra
 
 Switch between **EN** and **RU** in the toolbar or tray menu. Preferences are stored in `%LOCALAPPDATA%\CoreScope\settings.json`. Windows error messages and hardware-provided names retain their original language.
 
+### Command-line options
+
+Run these commands from the folder containing the executable:
+
+```powershell
+# Open the desktop window
+.\corescope.exe
+
+# Start in the system tray
+.\corescope.exe --tray
+
+# Run only the local API on a fixed port
+.\corescope.exe --no-open --port 8899
+```
+
+The desktop window normally uses a free local port. Starting another desktop instance restores the existing window. The API-only mode does not create a window or tray icon; stop its process when finished.
+
 ## Hardware sensors
 
 Two independent collectors run in the background:
