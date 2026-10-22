@@ -23,25 +23,31 @@ A Windows desktop application for seeing which processes execute on each CPU, co
 
 ## Screenshots
 
-These screenshots show **CoreScope 0.6.1 in English**, running with real process and sensor readings. They are cropped from the desktop application; readings vary with workload and hardware.
+These screenshots show **CoreScope 0.6.1 in English**, with real process and sensor readings. They are captured directly from the application interface at 2× pixel density and saved as lossless PNGs. Click an image to view it at full resolution. Readings vary with workload and hardware.
 
 ### System map and per-CPU activity
 
 Select a CPU on the isometric map to open **Activity**. The panel shows scheduled execution time, delivery delay, idle time, process history, and the activity threshold. **Allowed** and **Denied** remain one click away.
 
-![CoreScope 0.6.1: isometric system map and CPU 3 activity with the CPU ≥ 1% filter](docs/screenshots/activity-en.jpg)
+![CoreScope 0.6.1: isometric system map and CPU 3 activity with the CPU ≥ 1% filter](docs/screenshots/activity-en.png)
 
-### Process filters and affinity editor
+### Process filters
 
 The global list stays independent of the selected CPU. Combine name/PID search with a CPU, RAM, or affinity filter, then open a process to inspect its working set and choose its allowed CPUs. **Refresh memory map** loads its committed virtual-memory regions.
 
-![CoreScope 0.6.1: filtered process list, visible/total count, and the selected process's CPU affinity editor](docs/screenshots/processes-en.jpg)
+![CoreScope 0.6.1: RAM filter, visible/total process count, CPU usage and working set](docs/screenshots/processes-en.png)
+
+### Affinity editor and virtual memory
+
+Inspect the selected process's allowed CPUs and committed memory regions. Affinity changes take effect only when you click **Apply**.
+
+<a href="docs/screenshots/memory-en.png"><img src="docs/screenshots/memory-en.png" width="585" alt="CoreScope 0.6.1: CPU affinity editor and committed virtual-memory regions"></a>
 
 ### Temperatures and sensor history
 
 Sensor cards include the source, sample time, history, and interval minimum/maximum. ACPI thermal zones are labeled separately from CPU temperatures. This machine exposes ACPI and SSD temperatures; unsupported CPU temperatures are reported as unavailable.
 
-![CoreScope 0.6.1: ACPI and SSD temperatures with history graphs and source labels](docs/screenshots/sensors-en.jpg)
+<a href="docs/screenshots/sensors-en.png"><img src="docs/screenshots/sensors-en.png" width="585" alt="CoreScope 0.6.1: ACPI and SSD temperatures with history graphs and source labels"></a>
 
 ## Install
 
