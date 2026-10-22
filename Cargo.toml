@@ -1,6 +1,6 @@
 [package]
 name = "corescope"
-version = "0.6.0"
+version = "0.6.1"
 edition = "2021"
 description = "Windows desktop monitor for CPU affinity, process memory, and hardware telemetry"
 license = "MIT"

@@ -27,7 +27,7 @@ The screenshot shows a running application with real readings. Sensor availabili
 
 ## Install
 
-Download `CoreScope-Setup-0.6.0.exe` from [Releases](https://github.com/Sobolev5/corescope/releases/latest). The English/Russian installer creates shortcuts and an uninstall entry. Startup at sign-in is optional and starts the application in the tray.
+Download `CoreScope-Setup-0.6.1.exe` from [Releases](https://github.com/Sobolev5/corescope/releases/latest). The English/Russian installer creates shortcuts and an uninstall entry. Startup at sign-in is optional and starts the application in the tray.
 
 If Microsoft Edge WebView2 Runtime is missing, setup downloads it from Microsoft; an internet connection is needed for that step. The installer is currently unsigned.
 

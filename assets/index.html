@@ -32,7 +32,7 @@
       select {
         font: inherit;
       }
-      #language {
+      select {
         appearance: none;
         color: inherit;
         background: #f5f7fa url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m2 2 4 4 4-4' fill='none' stroke='%2366778a' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 12px center;
@@ -41,7 +41,11 @@
         padding: 9px 32px 9px 13px;
         cursor: pointer;
       }
-      #language:hover { border-color: var(--lime); }
+      select:hover { border-color: var(--lime); }
+      .processhead { flex-wrap: wrap; }
+      .processhead h2 { flex-shrink: 0; white-space: nowrap; }
+      .processhead .toolbar { flex: 1 1 100%; }
+      .processhead .toolbar input { flex: 1; min-width: 140px; }
       button:focus-visible, select:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
       button {
         cursor: pointer;
@@ -752,7 +756,7 @@
             <div id="cores" class="cores"></div>
           </section>
           <section class="panel lower">
-            <div class="panelhead">
+            <div class="panelhead processhead">
               <h2>Процессы <span id="count" class="muted"></span></h2>
               <div class="toolbar">
                 <select id="processFilter" aria-label="Фильтр процессов"><option value="all">Все процессы</option><option value="busy">CPU ≥ 1%</option><option value="memory">RAM ≥ 100 MiB</option><option value="restricted">Ограниченная привязка</option></select><button id="clearFilter" hidden>Сбросить</button><input
