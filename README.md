@@ -1,29 +1,47 @@
 # CoreScope
 
-A Windows desktop monitor for CPU affinity, process memory, and hardware telemetry. Built with Rust, with an isometric system map, a light interface, English/Russian localization, and a system tray menu.
+A Windows desktop application for seeing which processes execute on each CPU, controlling where they may run, and monitoring memory and hardware sensors. Built with Rust and an embedded WebView2 interface, with an isometric system map, a light theme, English/Russian localization, and a system tray menu.
 
 [Download the installer](https://github.com/Sobolev5/corescope/releases/latest) · [All releases](https://github.com/Sobolev5/corescope/releases) · [Report an issue](https://github.com/Sobolev5/corescope/issues)
 
-## Screenshot
-
-### Per-CPU process access
-
-Select a logical CPU to view which processes may run on it. Allow or deny access directly from the process list.
-
-![CoreScope in English: CPU 0 selected, with Allowed and Denied process tabs and per-process controls](docs/screenshots/cpu-access-en.jpg)
-
-The screenshot shows a running application with real readings. Sensor availability varies by hardware, permissions, and drivers.
-
 ## Features
 
-- **Per-CPU activity:** select a logical CPU to see processes scheduled there over the last one-second ETW window, with CPU time and a short history. Switch to Allowed/Denied to manage access.
-- **CPU affinity controls:** allow or deny individual CPUs, or edit a process's complete affinity mask. The last allowed CPU cannot be removed.
-- **Launch on selected CPUs:** start an executable with its affinity applied before its main thread resumes.
-- **Process explorer:** search by name or PID, filter CPU ≥ 1%, RAM ≥ 100 MiB, or restricted affinity, sort by CPU or RAM, and inspect the working set. Activity also offers 1% and 5% per-CPU thresholds.
-- **Virtual memory map:** committed regions, virtual addresses, sizes, allocation types, and protection flags.
-- **Integrated hardware telemetry:** Windows ACPI/storage readings plus bundled LibreHardwareMonitorLib. No separate monitoring application is required.
-- **Temperature history:** the latest 120 successful readings per sensor, with a graph and interval minimum/maximum.
-- **Desktop integration:** tray menu, close-to-tray behavior, optional startup at sign-in, and persistent EN/RU settings.
+| Area | What you can do |
+| --- | --- |
+| **CPU activity** | Click a logical CPU to see processes scheduled there during a one-second ETW window, with CPU time in milliseconds, utilization, and short history graphs. |
+| **Activity filters** | Show any activity, CPU ≥ 1%, or CPU ≥ 5%; search by process name or PID; see visible/total counts. |
+| **Allowed / Denied** | Switch from actual activity to scheduling permissions. Allow or deny the selected CPU directly from a process row. |
+| **Full affinity editor** | Select a process and edit its entire CPU affinity mask. The last allowed CPU cannot be removed. |
+| **Launch on CPUs** | Start an executable with affinity applied before its main thread resumes. |
+| **Process explorer** | Browse all processes independently of the selected CPU; search, sort by CPU or RAM, filter, and reset the view. |
+| **Process filters** | Show CPU ≥ 1%, RAM ≥ 100 MiB, or processes with restricted affinity. |
+| **Virtual memory** | Inspect committed regions, virtual addresses, sizes, image/private/mapped types, and protection flags. |
+| **Hardware telemetry** | View available temperatures, fan speeds, power, voltage, clocks, and loads through Windows collectors and bundled LibreHardwareMonitorLib. |
+| **Sensor history** | Inspect the latest 120 successful readings per sensor, with a graph, interval minimum/maximum, source, and sample time. |
+| **Desktop integration** | Use the tray menu, close-to-tray behavior, optional startup at sign-in, and persistent EN/RU settings. |
+| **Distribution** | Install with the English/Russian Windows installer or extract the portable ZIP. |
+
+## Screenshots
+
+These screenshots show **CoreScope 0.6.1 in English**, running with real process and sensor readings. They are cropped from the desktop application; readings vary with workload and hardware.
+
+### System map and per-CPU activity
+
+Select a CPU on the isometric map to open **Activity**. The panel shows scheduled execution time, delivery delay, idle time, process history, and the activity threshold. **Allowed** and **Denied** remain one click away.
+
+![CoreScope 0.6.1: isometric system map and CPU 3 activity with the CPU ≥ 1% filter](docs/screenshots/activity-en.jpg)
+
+### Process filters and affinity editor
+
+The global list stays independent of the selected CPU. Combine name/PID search with a CPU, RAM, or affinity filter, then open a process to inspect its working set and choose its allowed CPUs. **Refresh memory map** loads its committed virtual-memory regions.
+
+![CoreScope 0.6.1: filtered process list, visible/total count, and the selected process's CPU affinity editor](docs/screenshots/processes-en.jpg)
+
+### Temperatures and sensor history
+
+Sensor cards include the source, sample time, history, and interval minimum/maximum. ACPI thermal zones are labeled separately from CPU temperatures. This machine exposes ACPI and SSD temperatures; unsupported CPU temperatures are reported as unavailable.
+
+![CoreScope 0.6.1: ACPI and SSD temperatures with history graphs and source labels](docs/screenshots/sensors-en.jpg)
 
 ## Install
 
