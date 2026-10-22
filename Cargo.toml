@@ -2,7 +2,7 @@
 name = "corescope"
 version = "0.4.1"
 edition = "2021"
-description = "Local hardware and process observatory inspired by NetScope"
+description = "Windows desktop monitor for CPU affinity, process memory, and hardware telemetry"
 license = "MIT"
 
 [dependencies]
