@@ -1,6 +1,21 @@
 // Presentation-only localization. Source text is retained for reversible language changes.
 let language = 'ru';
 const translations = {
+ 'Для активности запустите CoreScope от администратора':'Run CoreScope as administrator to track activity',
+ 'Активность для нескольких групп CPU пока недоступна':'Activity across multiple CPU groups is not supported yet',
+ 'Выполнение за 1 секунду · задержка ':'Execution over 1 second · delay ',
+ 'Выполнение за 1 секунду · ETW':'Execution over 1 second · ETW',
+ 'Процесс завершён или недоступен':'Process exited or unavailable',
+ 'Ожидание событий ETW…':'Waiting for ETW events…',
+ 'События ETW задерживаются':'ETW events are delayed',
+ 'Сбор ETW остановлен':'ETW collection stopped',
+ 'Не удалось запустить ETW':'Could not start ETW',
+ 'Нераспознанное время:':'Unattributed time:',
+ 'Потеряно событий ETW:':'ETW events lost:',
+ 'Недостаточно данных':'Insufficient data',
+ 'Доля времени ядра':'Share of CPU time',
+ 'Активность':'Activity',
+ 'Простой':'Idle',
  'ACPI и накопители читаются через Windows. Расширенные датчики работают внутри CoreScope.':'ACPI and storage are read through Windows. Extended sensors run inside CoreScope.',
  'ACPI — термозона, не отдельное ядро.':'ACPI is a thermal zone, not an individual CPU core.',
  'Проверяем Windows и встроенный модуль.':'Checking Windows and the integrated module.',

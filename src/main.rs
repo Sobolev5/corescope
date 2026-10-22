@@ -1,4 +1,5 @@
 #![windows_subsystem = "windows"]
+mod activity;
 mod desktop;
 mod platform;
 mod settings;
@@ -167,7 +168,7 @@ fn collect(a: App) {
                 .unwrap_or_default()
                 .total_cmp(&a["cpu"].as_f64().unwrap_or_default())
         });
-        *a.snapshot.write().unwrap() = json!({"ready":true,"time":now(),"host":System::host_name(),"cpu_name":system.cpus().first().map(|c|c.brand()),"cpu_usage":system.global_cpu_usage(),"cpus":cpus,"processes":processes,"memory_total":system.total_memory(),"memory_used":system.used_memory(),"affinity_supported":platform::groups_supported()});
+        *a.snapshot.write().unwrap() = json!({"activity":activity::snapshot(),"ready":true,"time":now(),"host":System::host_name(),"cpu_name":system.cpus().first().map(|c|c.brand()),"cpu_usage":system.global_cpu_usage(),"cpus":cpus,"processes":processes,"memory_total":system.total_memory(),"memory_used":system.used_memory(),"affinity_supported":platform::groups_supported()});
     }
 }
 fn sensors(a: App, extended: bool) {
@@ -328,9 +329,22 @@ async fn run_server(
 }
 
 fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    if args.get(1).is_some_and(|s| s == "--etw-watch") {
+        if let (Some(pid), Some(name)) =
+            (args.get(2).and_then(|s| s.parse::<u32>().ok()), args.get(3))
+        {
+            activity::watch_parent(pid, name);
+        }
+        return;
+    }
     let headless = std::env::args().any(|a| a == "--no-open");
     if !headless && desktop::activate_existing() {
         return;
+    }
+    let _activity = activity::start();
+    if let Some(session) = &_activity {
+        session.watch();
     }
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()

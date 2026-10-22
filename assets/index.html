@@ -802,6 +802,7 @@
               <p class="hint" id="coreHint">Выберите ядро на карте.</p>
               <div class="coretools" id="coreTools" hidden>
                 <div class="coretabs">
+                  <button class="active" id="activityTab">Активность</button>
                   <button class="active" id="allowedTab">Разрешено</button
                   ><button id="deniedTab">Запрещено</button>
                 </div>
@@ -866,7 +867,7 @@
         selectedIdentity = null,
         draft = new Set(),
         filterCore = null,
-        coreMode = "allowed",
+        coreMode = "activity",
         coreBusy = false,
         sort = "cpu",
         memoryData = null,
@@ -1019,6 +1020,29 @@
           .join("");
       }
 
+      let activityOrder=[];
+      function renderActivity(core, sample) {
+        const a=data.activity||{};
+        if(a.status!=="running"||!sample){
+          const messages={permission:"Для активности запустите CoreScope от администратора",starting:"Ожидание событий ETW…",stale:"События ETW задерживаются",unsupported:"Активность для нескольких групп CPU пока недоступна",stopped:"Сбор ETW остановлен",error:"Не удалось запустить ETW"};
+          $("coreProcesses").innerHTML=`<div class="empty">${messages[a.status]||messages.starting}${a.error?' · '+a.error:''}</div>`;return;
+        }
+        $("coreHint").textContent=`Выполнение за 1 секунду · задержка ${Math.round(a.lag_ms)} ms · Простой ${pct(sample.idle)}%`;
+        const q=$("coreSearch").value.toLowerCase(), processes=new Map(data.processes.map(p=>[p.pid,p]));
+        let rows=sample.rows.map(r=>({...r,process:processes.get(r.pid)})).filter(r=>(r.process?.name||'').toLowerCase().includes(q)||String(r.pid).includes(q));
+        const hover=$("coreProcesses").matches(':hover')||$("coreProcesses").contains(document.activeElement);
+        if(hover&&activityOrder.length){const order=new Map(activityOrder.map((pid,i)=>[pid,i]));rows.sort((a,b)=>(order.get(a.pid)??1e9)-(order.get(b.pid)??1e9));}
+        activityOrder=rows.map(r=>r.pid);
+        // Preserve an actively focused control; otherwise update values in stable row order.
+        if($("coreProcesses").contains(document.activeElement))return;
+        $("coreProcesses").innerHTML=(sample.unknown>0.1?`<p class="hint">Нераспознанное время: ${pct(sample.unknown)}%</p>`:'')+(a.lost?`<p class="hint">Потеряно событий ETW: ${a.lost}</p>`:'')+rows.map(r=>{
+          const p=r.process,on=p?.affinity?.includes(core.id),last=on&&p.affinity.length===1;
+          const canChange=p?.identity&&p.allowed?.includes(core.id)&&!last;
+          const h=r.history||[],points=h.map((v,i)=>`${i*90/Math.max(1,h.length-1)},${22-Math.min(100,v)*.2}`).join(' ');
+          const title=p?`<button class="processlink" data-pid="${r.pid}"><strong>${esc(p.name)}</strong><small>PID ${r.pid} · ${pct(r.usage)}% · ${pct(r.ms)} ms</small></button>`:`<div class="processlink"><strong>PID ${r.pid}</strong><small>Процесс завершён или недоступен · ${pct(r.usage)}%</small></div>`;
+          return `<div class="coreprocess">${title}<svg width="90" height="24" viewBox="0 0 90 24" aria-label="Доля времени ядра"><polyline fill="none" stroke="#247a54" stroke-width="1.5" points="${points}"/></svg><button class="coretoggle ${on?'deny':'allow'}" data-toggle-pid="${r.pid}" data-identity="${esc(p?.identity||'')}" data-toggle-core="${core.id}" data-enable="${!on}" ${canChange?'':'disabled'}>${last?'Единственное':!p?.allowed?.includes(core.id)?'Нет доступа':on?'Запретить':'Разрешить'}</button></div>`;
+        }).join('')||'<div class="empty">'+(q?'Процессы не найдены':sample.unknown>1?'Недостаточно данных':'Простой')+'</div>';
+      }
       function renderCore() {
         if (!data?.ready || coreBusy) return;
         const core = data.cpus.find((c) => c.id === filterCore);
@@ -1032,7 +1056,7 @@
         }
         $("coreTitle").textContent = "CPU " + core.id;
         $("coreUsage").textContent = pct(core.usage) + "%";
-        $("coreHint").textContent = "Доступ к ядру по affinity";
+        $("coreHint").textContent = coreMode === "activity" ? "Выполнение за 1 секунду · ETW" : "Доступ к ядру по affinity";
         const known = data.processes.filter((p) =>
           p.allowed?.includes(core.id),
         );
@@ -1042,6 +1066,10 @@
           "Запрещено · " + (known.length - allowed.length);
         $("allowedTab").classList.toggle("active", coreMode === "allowed");
         $("deniedTab").classList.toggle("active", coreMode === "denied");
+        $("activityTab").classList.toggle("active", coreMode === "activity");
+        const activityCore=data.activity?.cores?.find(c=>c.id===core.id);
+        $("activityTab").textContent="Активность"+(activityCore ? " · "+activityCore.rows.length : "");
+        if(coreMode==="activity") { renderActivity(core,activityCore); return; }
         const q = $("coreSearch").value.toLowerCase();
         const rows = known
           .filter(
@@ -1092,12 +1120,11 @@
         let q = $("search").value.toLowerCase();
         let rows = data.processes.filter(
           (p) =>
-            (p.name.toLowerCase().includes(q) || String(p.pid).includes(q)) &&
-            (filterCore === null || p.affinity?.includes(filterCore)),
+            (p.name.toLowerCase().includes(q) || String(p.pid).includes(q)),
         );
         rows.sort((a, b) => b[sort] - a[sort]);
         $("count").textContent = "· " + rows.length;
-        $("clearFilter").hidden = filterCore === null;
+        $("clearFilter").hidden = true;
         $("clearFilter").textContent =
           filterCore === null ? "Все CPU" : `CPU ${filterCore} ×`;
         $("processes").innerHTML =
@@ -1254,6 +1281,7 @@
         setTimeout(poll, 1000);
       }
 
+      $("activityTab").onclick=()=>{coreMode="activity";activityOrder=[];renderCore();};
       $("allowedTab").onclick = () => {
         coreMode = "allowed";
         renderCore();
@@ -1310,7 +1338,8 @@
         const core = e.target.closest("[data-core]");
         if (core) {
           filterCore = +core.dataset.core;
-          coreMode = "allowed";
+          coreMode = "activity";
+          activityOrder=[];
           $("coreSearch").value = "";
           map();
           renderCore();
