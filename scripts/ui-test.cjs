@@ -115,7 +115,21 @@ test('CPU temperature status distinguishes missing driver, permissions, and disa
   const c=diagnosticsHarness();c.data={settings:{extended_sensors:true},telemetry:{extended:{diagnostics:{cpu_temperature_status:'driver_missing'}}}};
   assert.match(c.cpuTemperatureNotice(),/PawnIO/);assert.match(c.cpuTemperatureNotice(),/не установлен/);
   c.data.telemetry.extended.diagnostics.cpu_temperature_status='access_required';assert.match(c.cpuTemperatureNotice(),/от администратора/);assert.doesNotMatch(c.cpuTemperatureNotice(),/не установлен/);
+  assert.match(c.cpuTemperatureNotice(),/«Выход» в трее/);
+  c.data.runtime={pid:42,is_administrator:true};
+  assert.match(c.cpuTemperatureNotice(),/сборщик датчиков не получил эти права/);
+  assert.doesNotMatch(c.cpuTemperatureNotice(),/Выберите «Выход»/);
+  c.data.runtime.is_administrator=false;
+  assert.match(c.cpuTemperatureNotice(),/без прав администратора/);
   c.data.settings.extended_sensors=false;assert.match(c.cpuTemperatureNotice(),/включите расширенные датчики/);
+});
+test('sensor access diagnostics distinguish backend privileges from collector privileges and missing metadata',()=>{
+  const c=diagnosticsHarness();c.data={};assert.equal(c.sensorAccessStatus(),'');
+  c.data={runtime:{pid:42,is_administrator:true},telemetry:{extended:{diagnostics:{is_administrator:false}}}};
+  assert.match(c.sensorAccessStatus(),/CoreScope: администратор · PID 42 · Сборщик датчиков: обычные права/);
+  c.data.runtime.is_administrator=null;delete c.data.telemetry.extended.diagnostics.is_administrator;
+  assert.match(c.sensorAccessStatus(),/CoreScope: права не определены/);
+  assert.match(c.sensorAccessStatus(),/Сборщик датчиков: права не определены/);
 });
 test('application grouping combines instances and separates shared helpers belonging to different apps',()=>{
   const c=diagnosticsHarness();

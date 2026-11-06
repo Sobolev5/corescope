@@ -30,6 +30,7 @@ struct App {
     extended: Arc<RwLock<Value>>,
     token: Arc<String>,
     authority: Arc<String>,
+    runtime: Arc<Value>,
 }
 fn now() -> u64 {
     SystemTime::now()
@@ -96,6 +97,7 @@ async fn snapshot(State(a): State<App>) -> Json<Value> {
     s["automation"] = governor::snapshot();
     s["latency"] = latency::snapshot();
     s["activity_log"] = activity_log::status();
+    s["runtime"] = a.runtime.as_ref().clone();
     Json(s)
 }
 type ApiResult = Result<Json<Value>, (StatusCode, Json<Value>)>;
@@ -385,6 +387,7 @@ async fn run_server(
         extended: Arc::new(RwLock::new(json!({"sensors":[],"provider":null}))),
         token: Arc::new(random.iter().map(|b| format!("{b:02x}")).collect()),
         authority: Arc::new(authority.clone()),
+        runtime: Arc::new(platform::runtime_identity()),
     };
     let c = a.clone();
     std::thread::spawn(move || collect(c));
@@ -435,8 +438,15 @@ fn main() {
         return;
     }
     let headless = std::env::args().any(|a| a == "--no-open");
-    if !headless && desktop::activate_existing() {
-        return;
+    if !headless {
+        match desktop::activate_existing() {
+            Ok(true) => return,
+            Ok(false) => {}
+            Err(e) => {
+                desktop::error(&e);
+                return;
+            }
+        }
     }
     let _activity = activity::start();
     latency::start();

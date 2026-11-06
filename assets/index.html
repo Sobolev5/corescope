@@ -1366,7 +1366,7 @@
       function sensors() {
         const list = data.telemetry?.sensors || [];
         $("sensorCount").textContent = `${list.length} ДАТЧИКОВ`;
-        const signature=sensorPanelSignature(list,data.telemetry,data.settings,language);
+        const signature=sensorPanelSignature(list,data.telemetry,data.settings,language)+JSON.stringify(data.runtime??null);
         if(signature===sensors.signature)return;
         const panel=$("sensors"),scroll=panel.scrollTop;
         const focused=panel.contains(document.activeElement)?document.activeElement:null;
@@ -1388,8 +1388,10 @@
         const errors=[...(data.telemetry?.errors||[]),...(data.telemetry?.extended?.errors||[])];
         if(data.telemetry?.error)errors.push(data.telemetry.error);
         if(data.telemetry?.extended?.error)errors.push(data.telemetry.extended.error);
+        const access=sensorAccessStatus();
+        if(data.runtime?.elevation_error)errors.push(data.runtime.elevation_error);
         const cpu=temps().some(s=>/cpu/i.test(s.parent));
-        return `<p class="hint">Windows · ${data.settings?.extended_sensors?'Встроенный модуль включён':'Встроенный модуль выключен'}</p><p class="hint">ACPI — термозона, не отдельное ядро.</p>${!cpu?cpuTemperatureNotice():''}${errors.length?`<details data-sensor-key="sensor-diagnostics" ${sensorDisclosureOpen(sensorDisclosureState,'sensor-diagnostics')?'open':''}><summary>Диагностика датчиков</summary><p class="hint">${errors.map(esc).join('<br>')}</p></details>`:''}`;
+        return `<p class="hint">Windows · ${data.settings?.extended_sensors?'Встроенный модуль включён':'Встроенный модуль выключен'}</p><p class="hint">ACPI — термозона, не отдельное ядро.</p>${!cpu?cpuTemperatureNotice():''}${errors.length||access?`<details data-sensor-key="sensor-diagnostics" ${sensorDisclosureOpen(sensorDisclosureState,'sensor-diagnostics')?'open':''}><summary>Диагностика датчиков</summary><p class="hint">${[access,...errors].filter(Boolean).map(esc).join('<br>')}</p></details>`:''}`;
       }
       function sparkline(s) {
         const h=s.history||[];

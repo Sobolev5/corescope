@@ -121,6 +121,8 @@ Each reading includes its source and sample time. Disabling **Extended sensors**
 
 Some CPU sensors require PawnIO and elevated access. CoreScope does not install drivers or elevate itself automatically. Unsupported zero CPU-temperature readings are excluded; the interface reports that CPU temperature is unavailable. Sensor errors can be inspected under **Sensor diagnostics**.
 
+Launching CoreScope as administrator while a standard instance is still running replaces that instance through a normal shutdown, so temporary automatic restrictions are restored before the elevated instance starts. Older builds without this handover support must be closed using **Exit** in the tray menu first; the new launch reports this instead of silently reusing the standard instance. Sensor diagnostics show the actual server PID and the privileges of both CoreScope and its collector; the snapshot also exposes these server details in `runtime`.
+
 The extended collector reports whether PawnIO is installed, whether administrator access is available, the library version, and the number of temperature sensors/readings in `telemetry.extended.diagnostics`. Missing CPU temperatures now distinguish a missing driver from missing access or unsupported readings. A recognized CPU can expose named thermal sensors with null values until low-level hardware access is available. Obtain PawnIO separately from [its official website](https://pawnio.eu/), then restart CoreScope with the required privileges.
 
 History is held in memory until CoreScope exits. Missing samples are not replaced with invented readings.

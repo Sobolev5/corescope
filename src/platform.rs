@@ -7,6 +7,7 @@ use std::{
 use windows_sys::Win32::System::RemoteDesktop::ProcessIdToSessionId;
 use windows_sys::Win32::{
     Foundation::*,
+    Security::{GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY},
     System::{Memory::*, Threading::*},
 };
 
@@ -28,6 +29,43 @@ fn open(pid: u32, rights: u32) -> Result<Handle, String> {
     } else {
         Ok(Handle(h))
     }
+}
+pub fn process_elevated(pid: u32) -> Result<bool, String> {
+    let process = open(pid, PROCESS_QUERY_LIMITED_INFORMATION)?;
+    let mut raw_token = null_mut();
+    if unsafe { OpenProcessToken(process.0, TOKEN_QUERY, &mut raw_token) } == 0 {
+        return Err(err());
+    }
+    let token = Handle(raw_token);
+    let mut elevation: TOKEN_ELEVATION = unsafe { zeroed() };
+    let mut returned = 0;
+    if unsafe {
+        GetTokenInformation(
+            token.0,
+            TokenElevation,
+            (&mut elevation as *mut TOKEN_ELEVATION).cast(),
+            size_of::<TOKEN_ELEVATION>() as u32,
+            &mut returned,
+        )
+    } == 0
+    {
+        return Err(err());
+    }
+    if returned != size_of::<TOKEN_ELEVATION>() as u32 {
+        return Err("Windows returned an incomplete elevation token".into());
+    }
+    Ok(elevation.TokenIsElevated != 0)
+}
+pub fn runtime_identity() -> Value {
+    let pid = std::process::id();
+    let (is_administrator, elevation_error) = match process_elevated(pid) {
+        Ok(elevated) => (Some(elevated), None),
+        Err(error) => (None, Some(error)),
+    };
+    let executable = std::env::current_exe()
+        .ok()
+        .map(|path| path.to_string_lossy().into_owned());
+    json!({"pid":pid,"is_administrator":is_administrator,"elevation_error":elevation_error,"executable":executable})
 }
 fn identity(h: HANDLE) -> Result<u64, String> {
     unsafe {
@@ -343,12 +381,46 @@ mod tests {
         assert!(!m["regions"].as_array().unwrap().is_empty());
         assert!(memory(id, "wrong").is_err());
     }
+    #[test]
+    fn reports_own_token_elevation_and_runtime_identity() {
+        let pid = std::process::id();
+        let elevated = process_elevated(pid).unwrap();
+        let runtime = runtime_identity();
+        assert_eq!(runtime["pid"], pid);
+        assert_eq!(runtime["is_administrator"], elevated);
+        assert!(runtime["elevation_error"].is_null());
+        assert_eq!(
+            std::path::PathBuf::from(runtime["executable"].as_str().unwrap()),
+            std::env::current_exe().unwrap()
+        );
+    }
+    #[test]
+    fn invalid_processes_do_not_report_false_elevation() {
+        assert!(process_elevated(0).is_err());
+        assert!(process_elevated(u32::MAX).is_err());
+    }
 }
 
 #[cfg(test)]
 mod integration_tests {
     use super::*;
     use std::os::windows::process::CommandExt;
+    #[test]
+    fn disposable_child_inherits_process_elevation() {
+        let elevated = process_elevated(std::process::id()).unwrap();
+        let mut child = std::process::Command::new("ping.exe")
+            .args(["-n", "30", "127.0.0.1"])
+            .creation_flags(0x08000000)
+            .stdout(std::process::Stdio::null())
+            .spawn()
+            .unwrap();
+        let tested = std::panic::catch_unwind(|| {
+            assert_eq!(process_elevated(child.id()).unwrap(), elevated);
+        });
+        let _ = child.kill();
+        let _ = child.wait();
+        tested.unwrap();
+    }
     #[test]
     fn affinity_round_trip_on_disposable_child() {
         if !groups_supported() {

@@ -94,9 +94,17 @@ function cpuTemperatureNotice() {
   if(!data.settings?.extended_sensors)return '<p class="notice">Для температур CPU включите расширенные датчики в настройках.</p>';
   const status=data.telemetry?.extended?.diagnostics?.cpu_temperature_status;
   if(status==='driver_missing')return '<p class="notice">Для температур CPU нужен драйвер PawnIO. Он не установлен. После установки запустите CoreScope от администратора. <a href="https://pawnio.eu/" target="_blank" rel="noopener noreferrer">Официальный сайт PawnIO</a></p>';
-  if(status==='access_required')return '<p class="notice">PawnIO установлен. Для чтения температур CPU запустите CoreScope от администратора.</p>';
+  if(status==='access_required')return data.runtime?.is_administrator===true
+    ? '<p class="notice">CoreScope запущен от администратора, но сборщик датчиков не получил эти права. Перезапустите CoreScope и проверьте диагностику датчиков.</p>'
+    : '<p class="notice">Сейчас CoreScope работает без прав администратора. Выберите «Выход» в трее и запустите приложение от администратора повторно.</p>';
   if(status==='unavailable')return '<p class="notice">PawnIO установлен и права администратора доступны, но температур CPU пока нет. Подробности — в диагностике датчиков.</p>';
   return '<p class="notice">Температура CPU недоступна. Подробности — в диагностике датчиков.</p>';
+}
+function sensorAccessStatus() {
+  const runtime=data.runtime,collector=data.telemetry?.extended?.diagnostics;
+  if(!runtime)return '';
+  const role=value=>value===true?'администратор':value===false?'обычные права':'права не определены';
+  return `CoreScope: ${role(runtime.is_administrator)} · PID ${runtime.pid} · Сборщик датчиков: ${role(collector?.is_administrator)}`;
 }
 function tinyHistory(values) {
   if(values.length<2)return '';
