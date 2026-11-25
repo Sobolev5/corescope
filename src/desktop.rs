@@ -6,12 +6,19 @@ use std::{
 use windows_sys::Win32::{
     Foundation::*,
     Graphics::Gdi::COLOR_WINDOW,
-    System::{Com::*, LibraryLoader::*},
+    System::{Com::*, LibraryLoader::*, Threading::*},
     UI::{HiDpi::*, Shell::*, WindowsAndMessaging::*},
 };
 thread_local! { static VIEW: RefCell<Option<WebView>> = const { RefCell::new(None) }; }
 const CLASS: &str = "CoreScope.Desktop.Window";
 const WM_TRAY: u32 = WM_APP + 1;
+const RESTART_ACK: usize = 0x4353;
+fn elevation_restart_message() -> u32 {
+    static MESSAGE: std::sync::OnceLock<u32> = std::sync::OnceLock::new();
+    *MESSAGE.get_or_init(|| unsafe {
+        RegisterWindowMessageW(wide("CoreScope.Desktop.ExitForElevation").as_ptr())
+    })
+}
 thread_local! { static TRAY: std::cell::Cell<bool> = const { std::cell::Cell::new(false) }; }
 unsafe fn tray(hwnd: HWND, action: u32) {
     let mut n: NOTIFYICONDATAW = std::mem::zeroed();
@@ -115,11 +122,54 @@ pub fn error(s: &str) {
         );
     }
 }
-pub fn activate_existing() -> bool {
+pub fn activate_existing() -> Result<bool, String> {
     unsafe {
         let h = FindWindowW(wide(CLASS).as_ptr(), null());
         if h.is_null() {
-            return false;
+            return Ok(false);
+        }
+        if crate::platform::process_elevated(std::process::id())? {
+            let mut pid = 0;
+            GetWindowThreadProcessId(h, &mut pid);
+            if !crate::platform::process_elevated(pid)? {
+                let process = OpenProcess(
+                    PROCESS_SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION,
+                    0,
+                    pid,
+                );
+                if process.is_null() {
+                    return Err(std::io::Error::last_os_error().to_string());
+                }
+                let message = elevation_restart_message();
+                let mut reply = 0;
+                let sent = message != 0
+                    && SendMessageTimeoutW(
+                        h,
+                        message,
+                        std::process::id() as usize,
+                        0,
+                        SMTO_ABORTIFHUNG | SMTO_BLOCK,
+                        2000,
+                        &mut reply,
+                    ) != 0;
+                let result = if !sent || reply != RESTART_ACK {
+                    Err(if crate::settings::get().language == "en" {
+                        "An older CoreScope is already running without administrator privileges. Exit it using the tray menu, then start CoreScope as administrator again."
+                    } else {
+                        "Старая копия CoreScope уже работает без прав администратора. Выберите «Выход» в её трее, затем снова запустите CoreScope от администратора."
+                    }.into())
+                } else if WaitForSingleObject(process, 10_000) == WAIT_OBJECT_0 {
+                    Ok(false)
+                } else {
+                    Err(if crate::settings::get().language == "en" {
+                        "The previous CoreScope has not finished shutting down. Wait for it to exit, then start CoreScope as administrator again."
+                    } else {
+                        "Предыдущая копия CoreScope ещё завершает работу. Дождитесь её выхода и повторите запуск от администратора."
+                    }.into())
+                };
+                CloseHandle(process);
+                return result;
+            }
         }
         if IsIconic(h) != 0 {
             ShowWindow(h, SW_RESTORE);
@@ -127,7 +177,7 @@ pub fn activate_existing() -> bool {
             ShowWindow(h, SW_SHOW);
         }
         SetForegroundWindow(h);
-        true
+        Ok(true)
     }
 }
 fn external(url: &str) {
@@ -145,6 +195,21 @@ fn external(url: &str) {
     }
 }
 unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) -> LRESULT {
+    let restart = elevation_restart_message();
+    if restart != 0 && msg == restart {
+        if crate::platform::process_elevated(std::process::id()) == Ok(false)
+            && u32::try_from(w)
+                .ok()
+                .is_some_and(|pid| crate::platform::process_elevated(pid) == Ok(true))
+        {
+            VIEW.with(|v| {
+                v.borrow_mut().take();
+            });
+            DestroyWindow(hwnd);
+            return RESTART_ACK as isize;
+        }
+        return 0;
+    }
     if msg == RegisterWindowMessageW(wide("TaskbarCreated").as_ptr()) {
         tray(hwnd, NIM_ADD);
         return 0;
